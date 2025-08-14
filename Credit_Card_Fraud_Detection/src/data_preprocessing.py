@@ -9,10 +9,10 @@ sns.set_style("whitegrid")
 plt.style.use('seaborn-v0_8')
 plt.rcParams['figure.figsize'] = (10, 6)
 
-class DataLoadingVisualizatin:
+class DataLoadingVisualization:
     def __init__(self, cache_path):
         self.df = None # It will store the loaded data
-        self.cache_path = cache_path
+        self.cache_path = None 
         
     def create_cache(self):
         proj_directory = Path(__file__).resolve().parents[1]
@@ -67,14 +67,49 @@ class DataLoadingVisualizatin:
             print('No obvious label column found for class balance plot.')
 
             
+            
+            
         
-class DataPreprocessing():
-    pass
+class DataPreprocessing:
+    """
+    There is a list of columns we've got in the dataset:
+    Index(['Unnamed: 0', 'trans_date_trans_time', 'cc_num', 'merchant', 'category',
+       'amt', 'first', 'last', 'gender', 'street', 'city', 'state', 'zip',
+       'lat', 'long', 'city_pop', 'job', 'dob', 'trans_num', 'unix_time',
+       'merch_lat', 'merch_long', 'is_fraud', 'Unnamed: 23', '6006'],
+      dtype='object')
+    """
+    def __init__(self, dataframe):
+        self.original_df = dataframe  # creatae a reference to the original dataframe 
+        self.df = dataframe.copy(deep=True)
+        new_df = self.df
+        
+    def dropping_columns(self, columns_to_drop: list[str]) -> pd.DataFrame:
+        df = self.df.drop(columns=columns_to_drop, errors='ignore')
+        self.df = df
+        return self.df
+    
+    
+    
+        
+            
+        
+        
+        
+        
+        
+
+
+
+    def read_preprocessed_df(self):
+        print(self.df.columns)
+        return self.df.head()
+
 
 if __name__ == '__main__':
     data_path = "hf://datasets/dazzle-nu/CIS435-CreditCardFraudDetection/fraudTrain.csv"
         
-    loader = DataLoadingVisualizatin(data_path)
+    loader = DataLoadingVisualization(data_path)
     # loader.simple_data_showcase(data_path)
 
     loader.plot_numeric_distributions(data_path)
