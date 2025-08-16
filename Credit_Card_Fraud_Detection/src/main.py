@@ -15,12 +15,13 @@ def main():
         
         
     preprocessor = DataPreprocessing(data)  # takes the dataframe stored locally in the data_cache/fraudDataset.csv
-    drop_columns = ['cc_num', 'trans_num', 'first', 'last', 'street', 'Unnamed: 0', '6006', 'Unnamed: 23']
+    drop_columns = ['cc_num', 'trans_date_trans_time', 'trans_num', 'first', 'last', 'street', 'Unnamed: 0', '6006', 'Unnamed: 23']
     
     
     clean_data = preprocessor.dropping_columns(drop_columns)    
     clean_data = preprocessor.read_preprocessed_df()  
-    clean_data = preprocessor.is_null()
+    clean_data = preprocessor.process_merchant_column()
+    clean_data = preprocessor.extract_ages()
     
 
     clean_data.to_csv(cleaned_data_path, index=False)
@@ -29,3 +30,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
+    

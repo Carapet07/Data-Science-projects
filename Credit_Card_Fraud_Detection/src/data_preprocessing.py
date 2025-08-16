@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
+from sklearn.preprocessing import LabelEncoder
 
 sns.set_style("whitegrid")
 plt.style.use('seaborn-v0_8')
@@ -89,17 +90,42 @@ class DataPreprocessing:
         self.df = df
         return self.df
     
+    def process_merchant_column(self) -> pd.DataFrame:
+        le = LabelEncoder()
+        if 'merchant' not in self.df.columns:
+            print('Merchant columns is not found')
+            return self.df
+        self.df['merchant_encoding'] = le.fit_transform(self.df['merchant'])
+        self.df = self.df.drop('merchant', axis=1)
+        print('Merchant columns was encoded')
+        return self.df
     
-    
+    def extract_ages(self) -> pd.DataFrame:
+        """
+        Convert date of birth to age, handling century cutoff issue
+        Pandas uses a century cutoff where years 00-69 are interpreted as
+        2000-2069, and years 70-99 are interpreted as 1970-1999.
+        """
+        if 'dob' not in self.df.columns:
+            print('DOB not found')
+            return self.df
         
-            
+        birthday = pd.to_datetime(self.df['dob'], format='%m/%d/%y')
+        birthday_year = birthday.dt.year
+        
+        # To handle the panda's century problem we keep years which are below 2000 
+        # and those above this value are subtracting by 100
+        corrected_years = birthday_year.where(birthday_year < 2000, birthday_year-100)
+        
+        # Reference year based on transaction data
+        current_year = 2019
+        self.df['age'] = current_year - corrected_years
+        self.df = self.df.drop('dob', axis=1)
         
         
-        
-        
-        
+        return self.df
 
-
+        
 
     def read_preprocessed_df(self):
         print(self.df.columns)

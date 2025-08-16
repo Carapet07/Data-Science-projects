@@ -1,7 +1,7 @@
 Dataset: https://huggingface.co/datasets/dazzle-nu/CIS435-CreditCardFraudDetection
 
-All the code I'll write in .py files instead of .ipynb because I lack practice with working with classes and functions.
-So this project is something like training. All the functions are written in the src/data_preprocessing.py folder and executed in main.py . The data_preprocessing.ipynb is just for testing code and then transferring it in the .py file.
+All the code I'll write in .py files instead of .ipynb because I lack practice/experience in working with classes and functions.
+So this project is something like training/learning new things, new tech, learning how to write clear, readable and maintainable code. All the functions are written in the src/data_preprocessing.py folder and executed in main.py. The data_preprocessing.ipynb is just for testing code/functions and then transferring them to the .py file.
 
 When I am done with the standard ML 
     as loading data, visualizing, preprocessing(which is very complex for this dataset that involves different types of data to deal with), training. 
