@@ -22,10 +22,15 @@ def main():
     clean_data = preprocessor.read_preprocessed_df()  
     clean_data = preprocessor.process_merchant_column()
     clean_data = preprocessor.extract_ages()
-    
+    clean_data = preprocessor.harvesine()
+    clean_data = preprocessor.convert_unitx_to_datetime()
+    clean_data = preprocessor.target_encodig()
+    clean_data = preprocessor.frequency_encoding()
+    clean_data = preprocessor.gender_encoding()
+    clean_data = preprocessor.amount_and_population_feature_engineering()
 
     clean_data.to_csv(cleaned_data_path, index=False)
-
+    print('The preprocessing step is COMPLETED!')
 
 
 if __name__ == '__main__':
