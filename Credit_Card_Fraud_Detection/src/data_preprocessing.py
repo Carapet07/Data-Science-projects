@@ -213,6 +213,16 @@ class DataPreprocessing:
         self.df['city_pop_bin'] = pd.cut(self.df['city_pop'], 
                                         bins=5, labels=['very_small', 'small', 'medium', 'large', 'very_large'])
         
+        # Convert categorical bins to numeric (ordinal encoding)
+        amt_mapping = {'very_low': 0, 'low': 1, 'medium': 2, 'high': 3, 'very_high': 4}
+        pop_mapping = {'very_small': 0, 'small': 1, 'medium': 2, 'large': 3, 'very_large': 4}
+        
+        self.df['amt_bin_encoded'] = self.df['amt_bin'].map(amt_mapping)
+        self.df['city_pop_bin_encoded'] = self.df['city_pop_bin'].map(pop_mapping)
+        
+        # Drop the original categorical bins
+        self.df = self.df.drop(['amt_bin', 'city_pop_bin'], axis=1)
+        
         # Check for outliers
         outlier_columns = ['amt', 'city_pop']
         for col in outlier_columns:
