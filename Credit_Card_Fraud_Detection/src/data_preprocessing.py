@@ -104,7 +104,6 @@ class DataPreprocessing:
             return self.df
         self.df['merchant_encoding'] = le.fit_transform(self.df['merchant'])
         self.df = self.df.drop('merchant', axis=1)
-        print('Merchant columns was encoded')
         return self.df
 
     

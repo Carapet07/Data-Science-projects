@@ -1,7 +1,9 @@
 from data_preprocessing import DataLoadingVisualization, DataPreprocessing
+from model_building import DataPreparation, ModelBuilding, ModelTrainer
 from pathlib import Path
+import pandas as pd
 
-def main():
+def data_preprocessing():
     data_path = "hf://datasets/dazzle-nu/CIS435-CreditCardFraudDetection/fraudTrain.csv"
     loader = DataLoadingVisualization(data_path)
     data = loader.load_or_read_dataset(data_path)
@@ -31,9 +33,25 @@ def main():
 
     clean_data.to_csv(cleaned_data_path, index=False)
     print('The preprocessing step is COMPLETED!')
+    
+    
 
+def model_building():
+    project_dir = Path(__file__).resolve().parents[1]
+    cleaned_data_path = project_dir / 'data_cache' / 'cleanedFraudDataset.csv'
+    df = pd.read_csv(cleaned_data_path)
 
+    
+    trainer = ModelTrainer(dataframe=df,
+                           batch_size=32,
+                           epochs=10)
+    results = trainer.train()
+    
+    
+    
 if __name__ == '__main__':
-    main()
+    data_preprocessing()
+    model_building()
+    
     
     
