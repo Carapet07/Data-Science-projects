@@ -4,7 +4,8 @@ All the code I'll write in .py files instead of .ipynb because I lack practice/e
 
 When I am done with the standard ML as loading data, visualizing, preprocessing(which is very complex for this dataset that involves different types of data to deal with), training. I want to try different kinds of real world practices as:
 
-Command line arguments (using argparse) - I am a little familiar with this concept, has to deal with it in other project(self driving car if my mind serves me)
+Command line arguments (using argparse) - I am a little familiar with this concept, had to deal with it in other project(self driving car if my mind serves me)
+
 Configuration files (YAML/JSON)
 
 Logging instead of print statements
