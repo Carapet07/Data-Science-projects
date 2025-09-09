@@ -1,5 +1,5 @@
 from data_preprocessing import DataLoadingVisualization, DataPreprocessing
-from model_building import DataPreparation, ModelBuilding, ModelTrainer
+from model_building import DataPreparation, MLPBinary, ModelTrainer
 from pathlib import Path
 import pandas as pd
 
@@ -11,8 +11,7 @@ def data_preprocessing():
     
     project_dir = Path(__file__).resolve().parents[1]
     cleaned_data_path = project_dir / 'data_cache' / 'cleanedFraudDataset.csv'
-    if cleaned_data_path.exists():
-        Path.unlink(cleaned_data_path, missing_ok=True)  # delete the previous file before running a new experiment
+    # Note: File existence check is now handled in main()
     data.to_csv(cleaned_data_path, index=False)  # creates a new cleanedFraudDataset.csv file
         
         
@@ -20,17 +19,19 @@ def data_preprocessing():
     drop_columns = ['cc_num', 'trans_date_trans_time', 'trans_num', 'first', 'last', 'street', 'Unnamed: 0', '6006', 'Unnamed: 23']
     
     
-    clean_data = preprocessor.dropping_columns(drop_columns)    
-    clean_data = preprocessor.read_preprocessed_df()  
-    clean_data = preprocessor.process_merchant_column()
-    clean_data = preprocessor.extract_ages()
-    clean_data = preprocessor.harvesine()
-    clean_data = preprocessor.convert_unitx_to_datetime()
-    clean_data = preprocessor.target_encodig()
-    clean_data = preprocessor.frequency_encoding()
-    clean_data = preprocessor.gender_encoding()
-    clean_data = preprocessor.amount_and_population_feature_engineering()
-
+    # Chain preprocessing functions properly
+    preprocessor.dropping_columns(drop_columns)    
+    preprocessor.process_merchant_column()
+    preprocessor.extract_ages()
+    preprocessor.harvesine()
+    preprocessor.convert_unitx_to_datetime()
+    preprocessor.target_encodig()
+    preprocessor.frequency_encoding()
+    preprocessor.gender_encoding()
+    preprocessor.amount_and_population_feature_engineering()
+    
+    # Get the final processed DataFrame
+    clean_data = preprocessor.df
     clean_data.to_csv(cleaned_data_path, index=False)
     print('The preprocessing step is COMPLETED!')
     
@@ -44,13 +45,23 @@ def model_building():
     
     trainer = ModelTrainer(dataframe=df,
                            batch_size=32,
-                           epochs=10)
-    results = trainer.train()
-    
+                           epochs=1)
+    results = trainer.mlp_train()
+    evaluation_metrics = trainer.evaluate_torch()
+    #print(evaluation_metrics)
     
     
 if __name__ == '__main__':
-    data_preprocessing()
+    # Check if cleaned data already exists
+    project_dir = Path(__file__).resolve().parents[1]
+    cleaned_data_path = project_dir / 'data_cache' / 'cleanedFraudDataset.csv'
+    
+    if not cleaned_data_path.exists():
+        print("Cleaned data not found. Running preprocessing...")
+        data_preprocessing()
+    else:
+        print("Cleaned data found. Skipping preprocessing...")
+    
     model_building()
     
     
