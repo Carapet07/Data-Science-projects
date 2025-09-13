@@ -46,9 +46,17 @@ def model_building():
     trainer = ModelTrainer(dataframe=df,
                            batch_size=32,
                            epochs=1)
-    results = trainer.mlp_train()
-    evaluation_metrics = trainer.evaluate_torch()
-    #print(evaluation_metrics)
+    # Train models
+    mlp = trainer.mlp_train()
+    xgb = trainer.train_xgb()
+    rand_forest = trainer.train_rand_forest()
+    svm = trainer.train_svm_brf()
+    
+    # Evaluate models
+    trainer.evaluate_torch()
+    trainer.evaluate_all_models()
+    
+    
     
     
 if __name__ == '__main__':

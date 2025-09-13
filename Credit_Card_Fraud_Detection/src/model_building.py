@@ -1,10 +1,22 @@
 import numpy as np
 from pathlib import Path
+
+# pytorch
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
+
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.preprocessing import StandardScaler
+
+
+# custom models
+from xgboost import XGBClassifier
+from sklearn.ensemble  import RandomForestClassifier
+from sklearn.svm import SVC
+
 
 
 
@@ -21,8 +33,8 @@ class DataPreparation():
     
     
     def train_test_val_splits(self):
-        X = self.df.drop('is_fraud', axis=1)
-        y = self.df['is_fraud']
+        X = self.df.drop('is_fraud', axis=1).values.astype(np.float32)
+        y = self.df['is_fraud'].values.astype(np.int64)
         
         
         train_X, temp_X, train_y, temp_y = train_test_split(
@@ -39,12 +51,12 @@ class DataPreparation():
             stratify=temp_y
         )
         
-        X_train = torch.FloatTensor(train_X.values)
-        y_train = torch.FloatTensor(train_y.values) 
-        X_val = torch.FloatTensor(val_X.values)
-        y_val = torch.FloatTensor(val_y.values) 
-        X_test = torch.FloatTensor(test_X.values)
-        y_test = torch.FloatTensor(test_y.values)
+        X_train = torch.FloatTensor(train_X)
+        y_train = torch.FloatTensor(train_y) 
+        X_val = torch.FloatTensor(val_X)
+        y_val = torch.FloatTensor(val_y) 
+        X_test = torch.FloatTensor(test_X)
+        y_test = torch.FloatTensor(test_y)
         
         # Create datasets
         train_dataset = TensorDataset(X_train, y_train)
@@ -69,7 +81,24 @@ class DataPreparation():
         Pretrained models such as xbs, svm, random forest don't support directly the pytorch's
         data loaders, that is why we have to convert them back to numpy arrays for those models 
         """
-        pass
+        X = self.df.drop('is_fraud', axis=1)
+        y = self.df['is_fraud']
+        
+        X_train, X_temp, y_train, y_temp = train_test_split(
+            X, y, 
+            train_size=0.7,
+            random_state=42,
+            stratify=y
+        )
+        X_val, X_test, y_val, y_test = train_test_split(
+            X_temp, y_temp, 
+            train_size=0.5,
+            random_state=42,
+            stratify=y_temp
+        )
+        
+        
+        return (X_train, y_train), (X_val, y_val), (X_test, y_test)
     
     
 class MLPBinary(nn.Module):
@@ -125,57 +154,95 @@ class ModelTrainer:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f'Using device: {self.device}')
         
-        # Create data loaders
+        # Create data preparation instance
         data_prep = DataPreparation(dataframe, batch_size)
+        
+        # Get PyTorch DataLoaders for neural networks
         self.train_loader, self.val_loader, self.test_loader = data_prep.train_test_val_splits()
         
-        # Get input dimension from dataframe (excluding target column)
-        input_dim = len(dataframe.columns) - 1  # -1 for 'is_fraud' column
-        
-        # Initialize model with correct input dimension
-        self.logist_model = MLPBinary(input_dim)
-        self.logist_model = self.logist_model.to(self.device)
-        
-        # Initialize optimizer and loss function
-        self.optimizer = torch.optim.Adam(self.logist_model.parameters(), lr=0.01, weight_decay=1e-4)
-        self.criterion = nn.BCEWithLogitsLoss() 
-        
-        
+        # Get numpy arrays for scikit-learn models 
+        (self.X_train, self.y_train), (self.X_val, self.y_val), (self.X_test, self.y_test) = data_prep.to_numpy()
+        print('Data Prepared')
+
     def mlp_train(self):
+        input_dim = len(self.dataframe.columns) - 1  # -1 for 'is_fraud' column
+        logist_model = MLPBinary(input_dim)
+        logist_model = logist_model.to(self.device)
         
+        optimizer = torch.optim.Adam(logist_model.parameters(), lr=0.01, weight_decay=1e-4)
+        criterion = nn.BCEWithLogitsLoss()
+
+
         steps_per_epoch = len(self.train_loader)
-        self.logist_model.train()
+        logist_model.train()
         for epoch in range(self.epochs):
             total_loss = 0.0
             for (inputs, label) in self.train_loader:
                 inputs = inputs.to(self.device) 
                 label = label.to(self.device)
                 
-                outputs = self.logist_model(inputs)
-                loss = self.criterion(outputs.view(-1), label)
+                outputs = logist_model(inputs)
+                loss = criterion(outputs.view(-1), label)
                   
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
                 loss.backward()
-                self.optimizer.step()
+                optimizer.step()
                 
                 total_loss += loss.item()
             
-            print(f"[{epoch+1}]: loss: {(total_loss / steps_per_epoch):.3f}")
+            print(f"MLP model: [{epoch+1}]: loss: {(total_loss / steps_per_epoch):.3f}")
             
-        print('Training Finished!')
+        return logist_model
 
 
     def train_xgb(self):
-        pass
+        xgb = XGBClassifier(
+            n_estimators=800,  # This is like "epochs" for XGBoost
+            max_depth=8, 
+            learning_rate=0.05,
+            subsample=0.9, 
+            colsample_bytree=0.9,
+            objective="binary:logistic", 
+            eval_metric="logloss",
+            tree_method="hist", 
+            random_state=0
+        )
+        
+        xgb.fit(self.X_train, self.y_train, 
+                eval_set=[(self.X_val, self.y_val)], 
+                verbose=0)
+        return xgb
+    
     
     def train_rand_forest(self):
-        pass
+        rand_forest = RandomForestClassifier(
+            n_estimators=500,  # Number of trees (like "iterations")
+            max_depth=None,
+            random_state=0,  # Fixed typo
+            n_jobs=-1,  # Use all CPU cores
+            class_weight="balanced_subsample"
+        )                
+        rand_forest.fit(self.X_train, self.y_train)  # No batch_size/epochs for sklearn
+        return rand_forest
+    
     
     def train_svm_brf(self):
-        pass
+        # SVM needs scaling
+        scaler = StandardScaler().fit(self.X_train)
+        Xtr = scaler.transform(self.X_train)
+        Xv = scaler.transform(self.X_val)
+        
+        svm = SVC(
+            kernel="rbf", 
+            C=1.0, 
+            gamma="scale", 
+            probability=True, 
+            class_weight="balanced", 
+            random_state=0
+        )
+        svm.fit(Xtr, self.y_train)  # No batch_size/epochs for SVM
+        return (svm, scaler)
     
-    def train_linear_svm(self):
-        pass
 
 
     def evaluate_torch(self):
@@ -208,9 +275,81 @@ class ModelTrainer:
         
         return accuracy, all_predictions, all_labels
 
-    def evaluate_sklearn(self):
+
+    def evaluate_sklearn(self, model, scaler=None):
         """
-        This function is for evaluation non pytorch models like:
-        RandomForest, XGBoost, SVM RBF, Linear SVM 
-        """
+        Evaluate scikit-learn models (XGBoost, RandomForest, SVM)
         
+        Args:
+            model: Trained sklearn/xgboost model
+            scaler: Optional scaler (needed for SVM)
+        
+        Returns:
+            accuracy, predictions, true_labels
+        """
+
+        X_test = self.X_test
+        y_test = self.y_test
+         
+        # Apply scaling if provided (for SVM)
+        if scaler is not None:
+            X_test = scaler.transform(X_test)
+        
+        # Make predictions
+        predictions = model.predict(X_test)
+        prediction_probs = model.predict_proba(X_test)[:, 1]  # Get fraud probabilities
+        
+        # Calculate metrics
+        accuracy = accuracy_score(y_test, predictions)
+        
+        print(f'Test Accuracy: {accuracy:.4f}')
+        print("\nClassification Report:")
+        print(classification_report(y_test, predictions, target_names=['Not Fraud', 'Fraud']))
+        
+        return accuracy, predictions, y_test, prediction_probs
+    
+    def evaluate_all_models(self):
+        """
+        Train and evaluate all models for comparison
+        """
+        print("=" * 50)
+        print("TRAINING AND EVALUATING ALL MODELS")
+        print("=" * 50)
+        
+        results = {}
+        
+        # 1. PyTorch MLP
+        print("\n1. Training PyTorch MLP...")
+        mlp_model = self.mlp_train()
+        mlp_accuracy, _, _ = self.evaluate_torch()
+        results['MLP'] = mlp_accuracy
+        
+        # 2. XGBoost
+        print("\n2. Training XGBoost...")
+        xgb_model = self.train_xgb()
+        xgb_accuracy, _, _, _ = self.evaluate_sklearn(xgb_model)
+        results['XGBoost'] = xgb_accuracy
+        
+        # 3. Random Forest
+        print("\n3. Training Random Forest...")
+        rf_model = self.train_rand_forest()
+        rf_accuracy, _, _, _ = self.evaluate_sklearn(rf_model)
+        results['Random Forest'] = rf_accuracy
+        
+        # 4. SVM RBF
+        print("\n4. Training SVM RBF...")
+        svm_model, scaler = self.train_svm_rbf()
+        svm_accuracy, _, _, _ = self.evaluate_sklearn(svm_model, scaler)
+        results['SVM RBF'] = svm_accuracy
+        
+        # Summary
+        print("\n" + "=" * 50)
+        print("MODEL COMPARISON RESULTS")
+        print("=" * 50)
+        
+        for model, prediction in results.items():
+            print(f"{model:>15} {prediction:.4f} ({prediction*100:.4f})")
+            
+        best_model = max(results, key=results.get)
+        print(f"The {best_model} has the best accuracy of {results[best_model]:.4f}")
+        return results
