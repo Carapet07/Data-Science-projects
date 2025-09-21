@@ -1,25 +1,93 @@
-Dataset: https://huggingface.co/datasets/dazzle-nu/CIS435-CreditCardFraudDetection
+# Credit Card Fraud Detection
 
-All the code I'll write in .py files instead of .ipynb because I lack practice/experience in working with classes and functions. So this project is something like training/learning new things, new tech, learning how to write clear, readable and maintainable code. All the functions are written in the src/data_preprocessing.py folder and executed in main.py. The data_preprocessing.ipynb is just for testing code/functions and then transferring them to the .py file.
+**Dataset:** https://huggingface.co/datasets/dazzle-nu/CIS435-CreditCardFraudDetection
 
-When I am done with the standard ML as loading data, visualizing, preprocessing(which is very complex for this dataset that involves different types of data to deal with), training. I want to try different kinds of real world practices as:
+This project focuses on predicting credit card fraud based on transaction features such as Age, Distance from home, Merchant category, Day of Week, and transaction amount. The system includes a web-based demo where users can input synthetic transaction data to test whether the trained model classifies it as fraudulent or legitimate.
 
-Command line arguments (using argparse) - I am a little familiar with this concept, has to deal with it in other project(self driving car if my mind serves me)
+## Project Structure
 
-Configuration files (YAML/JSON)
+The `src/` folder contains two main modules:
+- `data_preprocessing.py` - Handles data loading, cleaning, and feature engineering
+- `model_building.py` - Implements multiple ML models including custom MLP, XGBoost, SVM, and Random Forest
 
-Logging instead of print statements
+These modules are orchestrated through `main.py`. Running `python src/main.py` initiates the complete pipeline:
+1. Data preprocessing (if not already done)
+2. Training multiple classification models
+3. Model evaluation and saving the best performer to `saved_models/` folder
 
-Error handling
+⚠️ **Note:** The full training process can take considerable time.
 
-Unit tests for functions
+## Setup Instructions
 
-Docker containerization
+### 1. Create and Activate Virtual Environment
+```bash
+# Create virtual environment
+python -m venv .venv
 
-Model versioning and experiment tracking (MLflow, Weights & Biases)
+# Activate virtual environment
+# On macOS/Linux:
+source .venv/bin/activate
 
-Building a simple REST API around the model (claude and gpt said FastAPI is great for this)
+# On Windows:
+.venv\Scripts\activate
+```
 
-Deploy it locally, then to cloud platforms
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+## Quick Start
 
-Add monitoring and health checks
+### Option 1: Quick Demo (Recommended for Testing)
+
+For rapid testing and demo purposes:
+
+1. **Train a demo model:**
+   ```bash
+   python demo_model.py
+   ```
+
+2. **Launch the Streamlit web application:**
+   ```bash
+   streamlit run streamlit_app.py
+   ```
+
+### Option 2: Full Model Training & Evaluation
+
+If you want to train all provided models (MLP, XGBoost, Random Forest, SVM) and automatically select the best performer:
+All of the provided above will give much better results than the custom MLP model
+
+```bash
+python src/main.py
+```
+
+```bash
+   streamlit run streamlit_app.py
+```
+
+⚠️ **Note:** This will:
+- Train multiple classification models
+- Evaluate and compare their performance  
+- Save the best model to `saved_models/` folder
+- Take considerably longer than the demo
+
+## Web Application Features
+
+The app will open in your browser at `http://localhost:8501`
+
+The web app features:
+- **Fraud Detector:** Real-time fraud prediction with user inputs
+- **Data Analytics:** Fraud pattern visualization and insights  
+- **Model Performance:** Metrics, confusion matrix, and feature importance
+
+## Future Enhancements
+
+- Command line arguments (argparse) for flexible configuration
+- YAML/JSON configuration files for model parameters
+- Structured logging instead of print statements
+- Comprehensive error handling and validation
+- Unit tests for core functions
+- Docker containerization for easy deployment
+- Model versioning and experiment tracking (MLflow/Weights & Biases)
+- REST API development (FastAPI)
+- Cloud deployment with monitoring and health checks

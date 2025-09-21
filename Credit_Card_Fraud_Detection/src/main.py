@@ -1,25 +1,27 @@
-from data_preprocessing import DataLoadingVisualization, DataPreprocessing
-from model_building import DataPreparation, MLPBinary, ModelTrainer
+"""
+Credit Card Fraud Detection - Main Training Pipeline
+"""
+
 from pathlib import Path
 import pandas as pd
+from data_preprocessing import DataLoadingVisualization, DataPreprocessing
+from model_building import ModelTrainer
 
 def data_preprocessing():
+    """Load and preprocess the fraud detection dataset"""
+    print("Starting data preprocessing...")
+    
+    # Load data
     data_path = "hf://datasets/dazzle-nu/CIS435-CreditCardFraudDetection/fraudTrain.csv"
     loader = DataLoadingVisualization(data_path)
     data = loader.load_or_read_dataset(data_path)
+    print(f"Data loaded. Shape: {data.shape}")
     
-    
-    project_dir = Path(__file__).resolve().parents[1]
-    cleaned_data_path = project_dir / 'data_cache' / 'cleanedFraudDataset.csv'
-    # Note: File existence check is now handled in main()
-    data.to_csv(cleaned_data_path, index=False)  # creates a new cleanedFraudDataset.csv file
-        
-        
-    preprocessor = DataPreprocessing(data)  # takes the dataframe stored locally in the data_cache/fraudDataset.csv
+    # Preprocess data
+    preprocessor = DataPreprocessing(data)
     drop_columns = ['cc_num', 'trans_date_trans_time', 'trans_num', 'first', 'last', 'street', 'Unnamed: 0', '6006', 'Unnamed: 23']
     
-    
-    # Chain preprocessing functions properly
+    # Apply all preprocessing steps
     preprocessor.dropping_columns(drop_columns)    
     preprocessor.process_merchant_column()
     preprocessor.extract_ages()
@@ -30,47 +32,51 @@ def data_preprocessing():
     preprocessor.gender_encoding()
     preprocessor.amount_and_population_feature_engineering()
     
-    # Get the final processed DataFrame
-    clean_data = preprocessor.df
-    clean_data.to_csv(cleaned_data_path, index=False)
-    print('The preprocessing step is COMPLETED!')
-    
-    
+    # Save processed data
+    project_dir = Path(__file__).resolve().parents[1]
+    cleaned_data_path = project_dir / 'data_cache' / 'cleanedFraudDataset.csv'
+    preprocessor.df.to_csv(cleaned_data_path, index=False)
+    print(f"Preprocessing completed. Saved to: {cleaned_data_path}")
 
 def model_building():
+    """Train all models and save the best one"""
+    print("Starting model training...")
+    
+    # Load preprocessed data
     project_dir = Path(__file__).resolve().parents[1]
     cleaned_data_path = project_dir / 'data_cache' / 'cleanedFraudDataset.csv'
     df = pd.read_csv(cleaned_data_path)
-
+    print(f"Data loaded. Shape: {df.shape}")
     
-    trainer = ModelTrainer(dataframe=df,
-                           batch_size=32,
-                           epochs=1)
     # Train models
-    mlp = trainer.mlp_train()
-    xgb = trainer.train_xgb()
-    rand_forest = trainer.train_rand_forest()
-    svm = trainer.train_svm_brf()
+    trainer = ModelTrainer(dataframe=df, batch_size=32, epochs=20)
+    best_model = trainer.save_best_model()
+    print(f"Training completed. Best model: {best_model}")
+
+def main():
+    """Run the complete fraud detection pipeline"""
+    print("="*50)
+    print("CREDIT CARD FRAUD DETECTION PIPELINE")
+    print("="*50)
     
-    # Evaluate models
-    trainer.evaluate_torch()
-    trainer.evaluate_all_models()
-    
-    
-    
-    
-if __name__ == '__main__':
-    # Check if cleaned data already exists
+    # Create directories
     project_dir = Path(__file__).resolve().parents[1]
+    (project_dir / 'data_cache').mkdir(exist_ok=True)
+    (project_dir / 'saved_models').mkdir(exist_ok=True)
+    
+    # Check if data is already processed
     cleaned_data_path = project_dir / 'data_cache' / 'cleanedFraudDataset.csv'
     
     if not cleaned_data_path.exists():
-        print("Cleaned data not found. Running preprocessing...")
         data_preprocessing()
     else:
-        print("Cleaned data found. Skipping preprocessing...")
+        print("Preprocessed data found. Skipping preprocessing.")
     
+    # Train models
     model_building()
-    
-    
-    
+    print("="*50)
+    print("PIPELINE COMPLETED!")
+    print("="*50)
+
+if __name__ == '__main__':
+    main()

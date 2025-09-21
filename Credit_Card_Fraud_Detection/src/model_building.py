@@ -191,7 +191,7 @@ class ModelTrainer:
                 total_loss += loss.item()
             
             print(f"MLP model: [{epoch+1}]: loss: {(total_loss / steps_per_epoch):.3f}")
-            
+             
         return logist_model
 
 
@@ -249,6 +249,7 @@ class ModelTrainer:
         """
         This function is for evaluating the Pytorch's MLP model I've made above
         """
+        self.logist_model = self.mlp_train()
         self.logist_model.eval()
         
         total_correct = 0
@@ -308,6 +309,7 @@ class ModelTrainer:
         
         return accuracy, predictions, y_test, prediction_probs
     
+    
     def evaluate_all_models(self):
         """
         Train and evaluate all models for comparison
@@ -317,30 +319,35 @@ class ModelTrainer:
         print("=" * 50)
         
         results = {}
+        models = {}  # Store the actual trained models
         
         # 1. PyTorch MLP
         print("\n1. Training PyTorch MLP...")
         mlp_model = self.mlp_train()
         mlp_accuracy, _, _ = self.evaluate_torch()
         results['MLP'] = mlp_accuracy
+        models['MLP'] = mlp_model
         
         # 2. XGBoost
         print("\n2. Training XGBoost...")
         xgb_model = self.train_xgb()
         xgb_accuracy, _, _, _ = self.evaluate_sklearn(xgb_model)
         results['XGBoost'] = xgb_accuracy
+        models['XGBoost'] = xgb_model
         
         # 3. Random Forest
         print("\n3. Training Random Forest...")
         rf_model = self.train_rand_forest()
         rf_accuracy, _, _, _ = self.evaluate_sklearn(rf_model)
         results['Random Forest'] = rf_accuracy
+        models['Random Forest'] = rf_model
         
         # 4. SVM RBF
         print("\n4. Training SVM RBF...")
         svm_model, scaler = self.train_svm_rbf()
         svm_accuracy, _, _, _ = self.evaluate_sklearn(svm_model, scaler)
         results['SVM RBF'] = svm_accuracy
+        models['SVM RBF'] = (svm_model, scaler)  # Store both model and scaler
         
         # Summary
         print("\n" + "=" * 50)
@@ -350,6 +357,45 @@ class ModelTrainer:
         for model, prediction in results.items():
             print(f"{model:>15} {prediction:.4f} ({prediction*100:.4f})")
             
-        best_model = max(results, key=results.get)
-        print(f"The {best_model} has the best accuracy of {results[best_model]:.4f}")
-        return results
+        best_model_name = max(results, key=results.get)
+        print(f"The {best_model_name} has the best accuracy of {results[best_model_name]:.4f}")
+        
+        return best_model_name, models, results
+    
+    def save_best_model(self):
+        """
+        Train all models, evaluate them, and save the best performing model
+        
+        Returns:
+            str: Name of the best model that was saved
+        """
+        import joblib
+        
+        print("Training and evaluating all models...")
+        
+        # Get best model info by training and evaluating all models
+        best_name, models, results = self.evaluate_all_models()
+        best_model = models[best_name]
+        
+        # Create save directory
+        save_dir = Path(__file__).resolve().parents[1] / 'saved_models'
+        save_dir.mkdir(exist_ok=True)
+        
+        # Save the best model
+        if best_name == 'MLP':
+            torch.save(best_model.state_dict(), save_dir / 'best_model.pth')
+            print(f"PyTorch model saved as: {save_dir / 'best_model.pth'}")
+        else:
+            joblib.dump(best_model, save_dir / 'best_model.pkl')
+            print(f"Scikit-learn model saved as: {save_dir / 'best_model.pkl'}")
+        
+        # Print final results summary
+        print("\n" + "="*60)
+        print("FINAL MODEL COMPARISON RESULTS:")
+        print("="*60)
+        for model_name, accuracy in results.items():
+            status = "🏆 BEST" if model_name == best_name else ""
+            print(f"{model_name}: {accuracy:.4f} {status}")
+        
+        print(f"\nBest model ({best_name}) saved with accuracy: {results[best_name]:.4f}")
+        return best_name
